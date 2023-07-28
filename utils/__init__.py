@@ -1,5 +1,7 @@
+import joblib
 import pandas as pd
 import plotly.express as px
+from sklearn.preprocessing import LabelEncoder
 
 
 def check_missing_columns(df: pd.DataFrame) -> pd.Series:
@@ -156,3 +158,29 @@ def plot_category_default_distribution(df: pd.DataFrame, category_col: str, dumm
     fig = px.bar(df_probs, y = category_col, x = renamed_col, height = height, width = width, title = title)
     fig.update_yaxes(tickmode = 'linear')
     return fig
+
+
+def encode_categorical_features(train: pd.DataFrame, test: pd.DataFrame, 
+                                categorical_features: list = ['industry', 'state', 'business_new', 'business_type', 'other_loans'], 
+                                encoder_path: str = './encoder/encoders.pkl') -> tuple:
+    """Encode categorical feature values to numerical values.
+
+    Args:
+        train (pd.DataFrame): train dataset.
+        test (pd.DataFrame): test dataset.
+        categorical_features (list, optional): names of categorical feature columns. Defaults to ['industry', 'state', 'business_new', 'business_type', 'other_loans'].
+        encoder_path (str, optional): file path to save encoder dict. Defaults to './encoder/encoders.pkl'.
+
+    Returns:
+        tuple: encoded train dataset, encoded test dataset, encoder_dict
+    """
+    encoder_dict = {}
+
+    for feature in categorical_features:
+        encoder = LabelEncoder()
+        train[feature] = encoder.fit_transform(train[feature])
+        test[feature] = encoder.transform(test[feature])
+        encoder_dict[feature] = encoder
+
+    joblib.dump(encoder_dict, encoder_path)
+    return train, test, encoder_dict
