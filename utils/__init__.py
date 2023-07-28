@@ -126,3 +126,33 @@ def plot_categories_distribution(df: pd.DataFrame, category_col: str, title: str
     fig.update_yaxes(tickmode = 'linear')
     fig.update_layout(width = width, height = height)
     return fig
+
+
+def plot_category_default_distribution(df: pd.DataFrame, category_col: str, dummy_col: str = 'id', height: int = 800, width: int = 600, title: str = None):
+    """Plot probability of default given categorical value.
+
+    Args:
+        df (pd.DataFrame): dataframe containing category column.
+        category_col (str): name of category column.
+        dummy_col (str, optional): dummy column to use for groupby. Defaults to 'id'.
+        height (int, optional): height of figure. Defaults to 800.
+        width (int, optional): width of figure. Defaults to 600.
+        title (str, optional): figure title. Defaults to None.
+
+    Returns:
+        Figure: plot of probability given categorical value.
+    """
+    title = f'Probability of default_status = 1 given {category_col}' if title is None else title
+    label_col = 'default_status'
+    group_cols = [category_col, label_col]
+    required_cols = group_cols + [dummy_col]
+    renamed_col = 'Probability'
+
+    df_probs = df[required_cols].groupby(group_cols).count() / df[[category_col, dummy_col]].groupby([category_col]).count()
+    df_probs = df_probs.reset_index().rename(columns = {dummy_col: renamed_col})
+    df_probs = df_probs[df_probs[label_col] == 1].sort_values(by = renamed_col)
+    df_probs[category_col] = df_probs[category_col].astype(str)
+
+    fig = px.bar(df_probs, y = category_col, x = renamed_col, height = height, width = width, title = title)
+    fig.update_yaxes(tickmode = 'linear')
+    return fig
