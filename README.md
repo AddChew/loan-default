@@ -28,4 +28,5 @@ conda activate loan-default
 - Open code_addison.html in your browser.
 
 ### To view the helper scripts used in code_addison.ipynb:
-- Navigate to and open utils/\__init__.py
+- Navigate to and open utils/\_\_init\_\_.py
+
