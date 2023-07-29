@@ -1,7 +1,18 @@
 import joblib
 import pandas as pd
+import lightgbm as lgb
 import plotly.express as px
 from sklearn.preprocessing import LabelEncoder
+
+
+lgb_parameters = {
+    'application': 'binary',
+    'objective': 'binary',
+    'metric': ['binary_logloss'],
+    'is_unbalance': 'true',
+    'boosting': 'gbdt',
+    'seed': 0,
+}
 
 
 def check_missing_columns(df: pd.DataFrame) -> pd.Series:
@@ -184,3 +195,63 @@ def encode_categorical_features(train: pd.DataFrame, test: pd.DataFrame,
 
     joblib.dump(encoder_dict, encoder_path)
     return train, test, encoder_dict
+
+
+def generate_submissions(model: lgb.Booster, test: pd.DataFrame, features: list, 
+                         threshold: int = 0.5, id_col: str = 'id',
+                         label_col: str = 'default_status', 
+                         submissions_path: str = 'submissions_addison.csv'):
+    """Run inference on test dataset and save inference results to a csv file.
+
+    Args:
+        model (lgb.Booster): fitted model.
+        test (pd.DataFrame): test dataframe.
+        features (list): list of features used in model training.
+        threshold (int, optional): probability threshold for predicting default_status = 1 class. Defaults to 0.5.
+        id_col (str, optional): name of id column. Defaults to 'id'.
+        label_col (str, optional): name of prediction column. Defaults to 'default_status'.
+        submissions_path (str, optional): output csv path of submissions. Defaults to 'submissions_addison.csv'.
+    """
+    print(f'test shape: {test.shape}')
+    submissions_cols = [id_col, label_col]
+    test[label_col] = (model.predict(test[features]) > threshold).astype(int)
+    submissions = test[submissions_cols]
+    print(f'Submissions shape: {submissions.shape}')
+    submissions.to_csv(submissions_path, index = False)
+    print(f'Saved submissions to {submissions_path}.')
+
+
+def train_lgb_model(train: pd.DataFrame, num_boost_rounds: int, features: list, 
+                    cat_features: list, val: pd.DataFrame = None, label_col: str = 'default_status',
+                    lgb_parameters: dict = lgb_parameters, model_path: str = None,
+                    callbacks: list = None) -> lgb.Booster:
+    """Train lightGBM model.
+
+    Args:
+        train (pd.DataFrame): dataframe containing train dataset.
+        num_boost_rounds (int): number of boosting rounds to train model.
+        features (list): full list of features used for model training.
+        cat_features (list): list of categorical features used for model training.
+        val (pd.DataFrame, optional): dataframe containing validation dataset. Defaults to None.
+        label_col (str, optional): name of label column. Defaults to 'default_status'.
+        lgb_parameters (dict, optional): training hyperparameters. Defaults to lgb_parameters.
+        model_path (str, optional): file path to save model to. Defaults to None.
+        callbacks (list, optional): list of callbacks to apply during model training. Defaults to None.
+
+    Returns:
+        lgb.Booster: fitted model.
+    """
+    train_data = lgb.Dataset(train[features], categorical_feature = cat_features, label = train[label_col], free_raw_data = False)
+    val_data = None
+
+    if val is not None:
+        val_data = lgb.Dataset(val[features], categorical_feature = cat_features, label = val[label_col], free_raw_data = False)
+
+    model = lgb.train(
+        lgb_parameters, train_data, valid_sets = val_data, num_boost_round = num_boost_rounds,
+        callbacks = callbacks
+    )
+    if model_path is not None:
+        model.save_model(model_path)
+
+    return model
