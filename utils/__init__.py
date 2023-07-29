@@ -3,11 +3,15 @@ import numpy as np
 import pandas as pd
 
 import lightgbm as lgb
+import plotly.io as pio
 import plotly.express as px
 
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
+
+
+pio.renderers.default = 'plotly_mimetype+notebook'
 
 
 lgb_parameters = {
