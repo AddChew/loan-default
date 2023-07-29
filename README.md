@@ -30,3 +30,26 @@ conda activate loan-default
 ### To view the helper scripts used in code_addison.ipynb:
 - Navigate to and open utils/\_\_init\_\_.py
 
+## Files
+
+code_addison.ipynb
+> - Jupyter Notebook containing the analysis results
+> 
+code_addison.html
+> - HTML version of code_addison.ipynb
+> 
+utils/\_\_init\_\_.py
+> - Contains helper classes and functions for analysis
+> 
+requirements.txt
+> - Contains the list of dependencies required to run code_addison.ipynb and utils/\_\_init\_\_.py
+> 
+README.md
+> - Contains the instructions for viewing the analysis results
+>
+data/train.csv
+> - Provided train dataset for analysis and modelling
+>
+data/test.csv
+> - Provided test dataset for model inference
+>
