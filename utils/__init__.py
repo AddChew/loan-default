@@ -1,8 +1,13 @@
 import joblib
+import numpy as np
 import pandas as pd
+
 import lightgbm as lgb
 import plotly.express as px
+
+from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import StratifiedKFold
 
 
 lgb_parameters = {
@@ -255,3 +260,86 @@ def train_lgb_model(train: pd.DataFrame, num_boost_rounds: int, features: list,
         model.save_model(model_path)
 
     return model
+
+
+def nested_stratified_kfold_cv(train: pd.DataFrame, features: list, cat_features: list, 
+                               num_folds: int = 5, threshold: float = 0.5, 
+                               label_col: str = 'default_status', scaling_factor: float = 1) -> dict:
+    """Perform nested stratified k-fold cross-validation.
+
+    Args:
+        train (pd.DataFrame): train dataframe.
+        features (list): full list of features used for model training.
+        cat_features (list): list of categorical features used for model training.
+        num_folds (int, optional): number of folds for cross validation. Defaults to 5.
+        threshold (float, optional): probability threshold for predicting default_status = 1 class. Defaults to 0.5.
+        label_col (str, optional): name of label column. Defaults to 'default_status'.
+
+    Returns:
+        dict: stratified kfold results.
+    """
+    skf = StratifiedKFold(n_splits = num_folds, shuffle = True, random_state = 0)
+
+    # Initialize metrics/hyperparameters containers
+    val_acc_list = []
+    test_acc_list = []
+    val_num_boost_rounds_list = []
+    test_num_boost_rounds_list = []
+
+    # Outer loop splits the dataset into train (N - 1 partitions) and test (1 partition) datasets
+    for train_idx_, test_idx in skf.split(train, train[label_col]):
+        train_outer = train.iloc[train_idx_]
+        test_outer = train.iloc[test_idx]
+
+        print(f'Outer train shape: {train_outer.shape}')
+        print(f'test shape: {test_outer.shape}')
+
+        inner_num_boost_rounds_list = []
+
+        # Inner loop splits the train dataset (N - 1 partitions) further into a smaller train (K - 1 partitions) and validation (1 partition) dataset for hyperparameter tuning
+        for train_idx, val_idx in skf.split(train_outer, train_outer[label_col]):
+            train_inner = train_outer.iloc[train_idx]
+            val_inner = train_outer.iloc[val_idx]
+
+            print(f'Inner train shape: {train_inner.shape}')
+            print(f'val shape: {val_inner.shape}')
+
+            model = train_lgb_model(
+                train = train_inner, num_boost_rounds = 100, 
+                features = features, cat_features = cat_features,
+                val = val_inner, callbacks = [lgb.early_stopping(stopping_rounds = 5)]
+            )
+
+            print(f'Best iteration: {model.best_iteration}')
+            val_preds = model.predict(val_inner[features], num_iteration = model.best_iteration) > threshold
+            val_acc = accuracy_score(val_inner[label_col], val_preds)
+            print(f'Validation accuracy: {val_acc}')
+            
+            val_acc_list.append(val_acc)
+            inner_num_boost_rounds_list.append(model.best_iteration)
+            val_num_boost_rounds_list.append(model.best_iteration)
+
+        # Train on full N - 1 partitions dataset and test on 1 partition held-out test set
+        # Extrapolate the num_boost_rounds based on the ratio K / (K - 1)
+        avg_val_num_boost_rounds = np.mean(inner_num_boost_rounds_list)
+        print(f'Average best iteration: {avg_val_num_boost_rounds}')
+
+        scaled_num_boost_rounds = int(avg_val_num_boost_rounds * scaling_factor)
+        print(f'Scaled average best iteration: {scaled_num_boost_rounds}')
+
+        model = train_lgb_model(
+            train = train_outer, num_boost_rounds = scaled_num_boost_rounds,
+            features = features, cat_features = cat_features
+        )
+        test_preds = model.predict(test_outer[features], num_iteration = model.best_iteration) > threshold
+        test_acc = accuracy_score(test_outer[label_col], test_preds)
+        print(f'Test accuracy: {test_acc}')
+        test_acc_list.append(test_acc)
+        test_num_boost_rounds_list.append(scaled_num_boost_rounds)
+
+    return {
+        'val_acc': val_acc_list,
+        'test_acc': test_acc_list,
+        'val_num_boost_rounds': val_num_boost_rounds_list,
+        'test_num_boost_rounds': test_num_boost_rounds_list
+    }
