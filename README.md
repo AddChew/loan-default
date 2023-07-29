@@ -51,5 +51,11 @@ data/train.csv
 > - Provided train dataset for analysis and modelling
 >
 data/test.csv
-> - Provided test dataset for model inference
+> - Provided unseen test dataset for model inference
+>
+submissions_addison.csv
+> - Test submission, containing the model inference on the unseen test dataset
+>
+presentation_addison.pdf
+> - Presentation slides
 >
