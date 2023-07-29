@@ -204,7 +204,7 @@ def encode_categorical_features(train: pd.DataFrame, test: pd.DataFrame,
 
 def generate_submissions(model: lgb.Booster, test: pd.DataFrame, features: list, 
                          threshold: int = 0.5, id_col: str = 'id',
-                         label_col: str = 'default_status', 
+                         label_col: str = 'default_status', score_col: str = 'model_score',
                          submissions_path: str = 'submissions_addison.csv'):
     """Run inference on test dataset and save inference results to a csv file.
 
@@ -219,7 +219,9 @@ def generate_submissions(model: lgb.Booster, test: pd.DataFrame, features: list,
     """
     print(f'test shape: {test.shape}')
     submissions_cols = [id_col, label_col]
-    test[label_col] = (model.predict(test[features]) > threshold).astype(int)
+    scores = model.predict(test[features])
+    test[score_col] = scores
+    test[label_col] = (scores > threshold).astype(int)
     submissions = test[submissions_cols]
     print(f'Submissions shape: {submissions.shape}')
     submissions.to_csv(submissions_path, index = False)
