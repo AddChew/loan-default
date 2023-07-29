@@ -7,9 +7,25 @@ This repository contains scripts and notebooks to:
 
 ## Setup Instructions
 
+The instructions here are required only if you wish to view/run the Jupyter Notebook on your local machine. Otherwise, you can just proceed to ***Viewing Instructions: To view the HTML version of the results***, which does not require any prior setup.
+
 Run setup.sh to setup your conda python environment and install the necessary libraries. This set of instructions assumes that you are using a linux system with conda pre-installed.
 ```
 chmod +x ./setup.sh
 ./setup.sh
 conda activate loan-default
 ```
+
+## Viewing Instructions
+
+### To view the Jupyter Notebook version of the results:
+
+- From the Home Page of the Jupyter Notebook, navigate to and open code_addison.ipynb.
+- Run all the cells in the notebook from top to bottom (Need to execute this step to view the interactive visualizations).
+
+### To view the HTML version of the results:
+
+- Open code_addison.html in your browser.
+
+### To view the helper scripts used in code_addison.ipynb:
+- Navigate to and open utils/\__init__.py
